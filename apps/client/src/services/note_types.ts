@@ -53,7 +53,8 @@ export const NOTE_TYPES: NoteTypeMapping[] = [
     { type: "file", title: t("note_types.file"), reserved: true },
     { type: "image", title: t("note_types.image"), reserved: true },
     { type: "launcher", mime: "", title: t("note_types.launcher"), reserved: true },
-    { type: "aiChat", mime: "application/json", title: t("note_types.ai-chat"), reserved: true }
+    { type: "aiChat", mime: "application/json", title: t("note_types.ai-chat"), reserved: true },
+    { type: "copilotCanvas", mime: "application/json", title: t("note_types.copilot-canvas"), reserved: false, icon: "bx-bot", isNew: true }
 ];
 
 /** The maximum age in days for a template to be marked with the "New" badge */

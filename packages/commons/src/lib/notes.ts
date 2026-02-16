@@ -21,7 +21,8 @@ export const NOTE_TYPE_ICONS = {
     doc: "bx bxs-file-doc",
     contentWidget: "bx bxs-widget",
     mindMap: "bx bx-sitemap",
-    aiChat: "bx bx-bot"
+    aiChat: "bx bx-bot",
+    copilotCanvas: "bx bx-bot"
 };
 
 const FILE_MIME_MAPPINGS = {
