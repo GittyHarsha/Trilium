@@ -4,14 +4,29 @@ import optionsService from "../options.js";
 import EventEmitter from "events";
 
 /**
+ * Metadata for a Copilot session
+ */
+interface SessionMetadata {
+    sessionId: string;
+    session: CopilotSession;
+    model: string;
+    name: string;
+    createdAt: number;
+    lastActivityAt: number;
+    messageCount: number;
+    isGlobal: boolean;
+}
+
+/**
  * Service for managing GitHub Copilot SDK integration
  * Provides agentic AI capabilities for note reading, editing, and manipulation
  */
 class CopilotService extends EventEmitter {
     private client: CopilotClient | null = null;
-    private sessions: Map<string, CopilotSession> = new Map();
+    private sessions: Map<string, SessionMetadata> = new Map();
     private isInitialized: boolean = false;
     private initPromise: Promise<void> | null = null;
+    private globalSessionId: string | null = null;
 
     constructor() {
         super();
@@ -65,9 +80,11 @@ class CopilotService extends EventEmitter {
      * Create a new copilot session
      * @param sessionId - Unique identifier for the session
      * @param model - LLM model to use (e.g., "gpt-5", "claude-sonnet")
+     * @param name - Display name for the session
+     * @param isGlobal - Whether this is a global session
      * @returns CopilotSession instance
      */
-    async createSession(sessionId: string, model?: string): Promise<CopilotSession> {
+    async createSession(sessionId: string, model?: string, name?: string, isGlobal?: boolean): Promise<CopilotSession> {
         await this.init();
 
         if (!this.client) {
@@ -76,7 +93,7 @@ class CopilotService extends EventEmitter {
 
         // Check if session already exists
         if (this.sessions.has(sessionId)) {
-            return this.sessions.get(sessionId)!;
+            return this.sessions.get(sessionId)!.session;
         }
 
         log.info(`Creating new Copilot session: ${sessionId} with model: ${model || "default"}`);
@@ -85,9 +102,24 @@ class CopilotService extends EventEmitter {
             model: model || optionsService.getOption("copilotModel") || undefined
         });
 
-        this.sessions.set(sessionId, session);
+        const metadata: SessionMetadata = {
+            sessionId,
+            session,
+            model: model || optionsService.getOption("copilotModel") || "gpt-5",
+            name: name || `Session ${sessionId.substring(0, 8)}`,
+            createdAt: Date.now(),
+            lastActivityAt: Date.now(),
+            messageCount: 0,
+            isGlobal: isGlobal || false
+        };
+
+        this.sessions.set(sessionId, metadata);
         
-        this.emit("sessionCreated", { sessionId, model });
+        if (isGlobal) {
+            this.globalSessionId = sessionId;
+        }
+        
+        this.emit("sessionCreated", { sessionId, model, name, isGlobal });
         
         return session;
     }
@@ -98,7 +130,76 @@ class CopilotService extends EventEmitter {
      * @returns CopilotSession or null if not found
      */
     getSession(sessionId: string): CopilotSession | null {
+        const metadata = this.sessions.get(sessionId);
+        return metadata ? metadata.session : null;
+    }
+
+    /**
+     * Get session metadata
+     * @param sessionId - Session identifier
+     * @returns SessionMetadata or null if not found
+     */
+    getSessionMetadata(sessionId: string): SessionMetadata | null {
         return this.sessions.get(sessionId) || null;
+    }
+
+    /**
+     * Get all sessions with metadata
+     * @returns Array of session metadata
+     */
+    getAllSessionsMetadata(): Array<Omit<SessionMetadata, 'session'>> {
+        return Array.from(this.sessions.values()).map(({ session, ...metadata }) => metadata);
+    }
+
+    /**
+     * Get the global session
+     * @returns CopilotSession or null if no global session exists
+     */
+    getGlobalSession(): CopilotSession | null {
+        if (!this.globalSessionId) {
+            return null;
+        }
+        return this.getSession(this.globalSessionId);
+    }
+
+    /**
+     * Set a session as global
+     * @param sessionId - Session identifier
+     */
+    setGlobalSession(sessionId: string): void {
+        const metadata = this.sessions.get(sessionId);
+        if (!metadata) {
+            throw new Error(`Session not found: ${sessionId}`);
+        }
+
+        // Unset previous global session
+        if (this.globalSessionId) {
+            const prevGlobal = this.sessions.get(this.globalSessionId);
+            if (prevGlobal) {
+                prevGlobal.isGlobal = false;
+            }
+        }
+
+        // Set new global session
+        metadata.isGlobal = true;
+        this.globalSessionId = sessionId;
+        
+        this.emit("globalSessionChanged", { sessionId });
+    }
+
+    /**
+     * Update session name
+     * @param sessionId - Session identifier
+     * @param name - New name for the session
+     */
+    updateSessionName(sessionId: string, name: string): void {
+        const metadata = this.sessions.get(sessionId);
+        if (!metadata) {
+            throw new Error(`Session not found: ${sessionId}`);
+        }
+
+        metadata.name = name;
+        this.emit("sessionUpdated", { sessionId, name });
     }
 
     /**
@@ -118,20 +219,24 @@ class CopilotService extends EventEmitter {
             context?: any;
         }
     ): Promise<any> {
-        const session = this.getSession(sessionId);
-        if (!session) {
+        const metadata = this.sessions.get(sessionId);
+        if (!metadata) {
             throw new Error(`Session not found: ${sessionId}`);
         }
 
         log.info(`Sending message to Copilot session ${sessionId}`);
         
         try {
-            const response = await session.send({
+            const response = await metadata.session.send({
                 prompt,
                 ...(options?.streaming && { streaming: true }),
                 ...(options?.tools && { tools: options.tools }),
                 ...(options?.context && { context: options.context })
             });
+
+            // Update metadata
+            metadata.lastActivityAt = Date.now();
+            metadata.messageCount++;
 
             if (options?.streaming && options?.onChunk) {
                 // Handle streaming response

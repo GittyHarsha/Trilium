@@ -15,15 +15,17 @@ import log from "../../services/log.js";
  */
 export async function createSession(req: Request, res: Response) {
     try {
-        const { model } = req.body;
+        const { model, name, isGlobal } = req.body;
         const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        const session = await copilotService.createSession(sessionId, model);
+        const session = await copilotService.createSession(sessionId, model, name, isGlobal);
 
         res.json({
             success: true,
             sessionId: sessionId,
             model: model || "default",
+            name: name || sessionId,
+            isGlobal: isGlobal || false,
             availableTools: [...getToolDefinitions(), ...getSpecializedToolDefinitions()]
         });
     } catch (error) {
@@ -276,6 +278,105 @@ export async function chatWithContext(req: Request, res: Response) {
     }
 }
 
+/**
+ * Get list of all sessions with metadata
+ * GET /api/copilot/sessions
+ */
+export function listSessions(req: Request, res: Response) {
+    try {
+        const sessions = copilotService.getAllSessionsMetadata();
+        const globalSessionId = copilotService.getGlobalSession() ? 
+            sessions.find(s => s.isGlobal)?.sessionId : null;
+
+        res.json({
+            success: true,
+            sessions: sessions,
+            globalSessionId: globalSessionId,
+            count: sessions.length
+        });
+    } catch (error) {
+        log.error(`Error listing sessions: ${error}`);
+        res.status(500).json({
+            success: false,
+            error: `Failed to list sessions: ${error}`
+        });
+    }
+}
+
+/**
+ * Get session details
+ * GET /api/copilot/sessions/:sessionId/info
+ */
+export function getSessionInfo(req: Request, res: Response) {
+    try {
+        const { sessionId } = req.params;
+        const metadata = copilotService.getSessionMetadata(sessionId);
+
+        if (!metadata) {
+            return res.status(404).json({
+                success: false,
+                error: `Session not found: ${sessionId}`
+            });
+        }
+
+        res.json({
+            success: true,
+            session: {
+                sessionId: metadata.sessionId,
+                model: metadata.model,
+                name: metadata.name,
+                createdAt: metadata.createdAt,
+                lastActivityAt: metadata.lastActivityAt,
+                messageCount: metadata.messageCount,
+                isGlobal: metadata.isGlobal
+            }
+        });
+    } catch (error) {
+        log.error(`Error getting session info: ${error}`);
+        res.status(500).json({
+            success: false,
+            error: `Failed to get session info: ${error}`
+        });
+    }
+}
+
+/**
+ * Update session (rename or set as global)
+ * PATCH /api/copilot/sessions/:sessionId
+ */
+export function updateSession(req: Request, res: Response) {
+    try {
+        const { sessionId } = req.params;
+        const { name, setAsGlobal } = req.body;
+
+        if (name !== undefined) {
+            copilotService.updateSessionName(sessionId, name);
+        }
+
+        if (setAsGlobal === true) {
+            copilotService.setGlobalSession(sessionId);
+        }
+
+        const metadata = copilotService.getSessionMetadata(sessionId);
+
+        res.json({
+            success: true,
+            session: metadata ? {
+                sessionId: metadata.sessionId,
+                model: metadata.model,
+                name: metadata.name,
+                isGlobal: metadata.isGlobal
+            } : null
+        });
+    } catch (error) {
+        log.error(`Error updating session: ${error}`);
+        res.status(500).json({
+            success: false,
+            error: `Failed to update session: ${error}`
+        });
+    }
+}
+
 export default {
     createSession,
     sendMessage,
@@ -283,5 +384,8 @@ export default {
     getTools,
     closeSession,
     getStatus,
-    chatWithContext
+    chatWithContext,
+    listSessions,
+    getSessionInfo,
+    updateSession
 };

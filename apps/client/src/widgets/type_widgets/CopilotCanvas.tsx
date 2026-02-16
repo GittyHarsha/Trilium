@@ -8,22 +8,60 @@ import type { TypeWidgetProps } from "./type_widget";
 import server from "../../services/server";
 import toastService from "../../services/toast";
 
+interface SessionOption {
+    sessionId: string;
+    name: string;
+    isGlobal: boolean;
+}
+
 export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [availableSessions, setAvailableSessions] = useState<SessionOption[]>([]);
+    const [useExistingSession, setUseExistingSession] = useState(false);
     const [prompt, setPrompt] = useState("");
     const [response, setResponse] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
     const [contextNotes, setContextNotes] = useState<string[]>([]);
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
-    // Initialize copilot session
+    // Load available sessions
     useEffect(() => {
-        initSession();
+        loadSessions();
     }, []);
 
-    const initSession = async () => {
+    const loadSessions = async () => {
         try {
-            const resp = await server.post("copilot/sessions", { model: "gpt-5" });
+            const resp = await server.get("copilot/sessions");
+            if (resp.success && resp.sessions) {
+                setAvailableSessions(resp.sessions.map((s: any) => ({
+                    sessionId: s.sessionId,
+                    name: s.name,
+                    isGlobal: s.isGlobal
+                })));
+            }
+        } catch (error) {
+            console.error("Failed to load sessions:", error);
+        }
+    };
+
+    // Initialize copilot session or use existing
+    useEffect(() => {
+        if (!useExistingSession || !sessionId) {
+            initSession();
+        }
+    }, [useExistingSession]);
+
+    const initSession = async () => {
+        if (useExistingSession && sessionId) {
+            // Using an existing session, no need to create new one
+            return;
+        }
+
+        try {
+            const resp = await server.post("copilot/sessions", { 
+                model: "gpt-5",
+                name: `Note: ${note.title}`
+            });
             if (resp.success && resp.sessionId) {
                 setSessionId(resp.sessionId);
             }
@@ -131,6 +169,44 @@ export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
                 <p style={{ margin: "5px 0 0 0", fontSize: "0.9em", color: "var(--muted-text-color)" }}>
                     AI-assisted editing for {note.title}
                 </p>
+                
+                {/* Session Selector */}
+                <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.9em" }}>
+                        <input
+                            type="checkbox"
+                            checked={useExistingSession}
+                            onChange={(e) => setUseExistingSession((e.target as HTMLInputElement).checked)}
+                        />
+                        Use existing session
+                    </label>
+                    {useExistingSession && availableSessions.length > 0 && (
+                        <select
+                            style={{
+                                flex: 1,
+                                padding: "4px 8px",
+                                border: "1px solid var(--main-border-color)",
+                                borderRadius: "4px",
+                                backgroundColor: "var(--main-background-color)",
+                                color: "var(--main-text-color)"
+                            }}
+                            value={sessionId || ""}
+                            onChange={(e) => setSessionId((e.target as HTMLSelectElement).value)}
+                        >
+                            <option value="">Select a session...</option>
+                            {availableSessions.map(sess => (
+                                <option key={sess.sessionId} value={sess.sessionId}>
+                                    {sess.isGlobal ? "🌍 " : ""}{sess.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                    {useExistingSession && availableSessions.length === 0 && (
+                        <span style={{ fontSize: "0.9em", color: "var(--muted-text-color)" }}>
+                            No sessions available
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Chat Area */}

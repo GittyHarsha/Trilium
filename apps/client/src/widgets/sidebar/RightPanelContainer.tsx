@@ -20,6 +20,7 @@ import PdfLayers from "./pdf/PdfLayers";
 import PdfPages from "./pdf/PdfPages";
 import RightPanelWidget from "./RightPanelWidget";
 import TableOfContents from "./TableOfContents";
+import CopilotSessionManager from "./CopilotSessionManager";
 
 const MIN_WIDTH_PERCENT = 5;
 
@@ -71,6 +72,11 @@ function useItems(rightPaneVisible: boolean, widgetsByParent: WidgetsByParent) {
 
     if (!rightPaneVisible) return [];
     const definitions: RightPanelWidgetDefinition[] = [
+        {
+            el: <CopilotSessionManager />,
+            enabled: true,
+            position: 5
+        },
         {
             el: <TableOfContents />,
             enabled: (noteType === "text" || noteType === "doc" || isPdf),

@@ -383,8 +383,11 @@ function register(app: express.Application) {
     // Copilot SDK API
     asyncApiRoute(GET, "/api/copilot/status", copilotRoute.getStatus);
     asyncApiRoute(GET, "/api/copilot/tools", copilotRoute.getTools);
+    asyncApiRoute(GET, "/api/copilot/sessions", copilotRoute.listSessions);
+    asyncApiRoute(GET, "/api/copilot/sessions/:sessionId/info", copilotRoute.getSessionInfo);
     asyncApiRoute(PST, "/api/copilot/sessions", copilotRoute.createSession);
     asyncApiRoute(PST, "/api/copilot/sessions/:sessionId/send", copilotRoute.sendMessage);
+    asyncApiRoute(PATCH, "/api/copilot/sessions/:sessionId", copilotRoute.updateSession);
     asyncApiRoute(DEL, "/api/copilot/sessions/:sessionId", copilotRoute.closeSession);
     asyncApiRoute(PST, "/api/copilot/tools/:toolName/execute", copilotRoute.executeToolDirectly);
     asyncApiRoute(PST, "/api/copilot/chat-with-context", copilotRoute.chatWithContext);
