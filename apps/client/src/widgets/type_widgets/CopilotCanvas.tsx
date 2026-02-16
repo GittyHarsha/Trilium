@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { TypeWidgetProps } from "./type_widget";
 import server from "../../services/server";
 import toastService from "../../services/toast";
+import copilotSelection from "../../services/copilot_selection";
+import type { SelectionInfo } from "../../services/copilot_selection";
 
 interface SessionOption {
     sessionId: string;
@@ -22,11 +24,25 @@ export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
     const [response, setResponse] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
     const [contextNotes, setContextNotes] = useState<string[]>([]);
+    const [activeSelection, setActiveSelection] = useState<SelectionInfo | null>(null);
+    const [useSelection, setUseSelection] = useState(true);
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     // Load available sessions
     useEffect(() => {
         loadSessions();
+    }, []);
+
+    // Subscribe to selection changes
+    useEffect(() => {
+        const unsubscribe = copilotSelection.onSelectionChange((selection) => {
+            setActiveSelection(selection);
+        });
+
+        // Set initial selection if any
+        setActiveSelection(copilotSelection.getSelection());
+
+        return unsubscribe;
     }, []);
 
     const loadSessions = async () => {
@@ -80,8 +96,15 @@ export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
         setResponse("");
 
         try {
+            // Build prompt with selection context if enabled
+            let fullPrompt = prompt.trim();
+            if (useSelection && activeSelection) {
+                const selectionContext = copilotSelection.formatAsContext();
+                fullPrompt = selectionContext + "User Query: " + fullPrompt;
+            }
+
             const resp = await server.post(`copilot/sessions/${sessionId}/send`, {
-                prompt: prompt.trim(),
+                prompt: fullPrompt,
                 context: contextNotes.length > 0 ? { notes: contextNotes } : undefined
             });
 
@@ -108,8 +131,15 @@ export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
         setResponse("");
 
         try {
+            // Build prompt with selection context if enabled
+            let fullPrompt = prompt.trim();
+            if (useSelection && activeSelection) {
+                const selectionContext = copilotSelection.formatAsContext();
+                fullPrompt = selectionContext + "User Query: " + fullPrompt;
+            }
+
             const resp = await server.post("copilot/chat-with-context", {
-                prompt: prompt.trim(),
+                prompt: fullPrompt,
                 noteIds: [note.noteId, ...contextNotes],
                 sessionId: sessionId || undefined
             });
@@ -169,6 +199,60 @@ export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
                 <p style={{ margin: "5px 0 0 0", fontSize: "0.9em", color: "var(--muted-text-color)" }}>
                     AI-assisted editing for {note.title}
                 </p>
+                
+                {/* Active Selection Indicator */}
+                {activeSelection && (
+                    <div style={{
+                        marginTop: "10px",
+                        padding: "8px",
+                        backgroundColor: "var(--main-background-color)",
+                        border: "1px solid var(--main-border-color)",
+                        borderRadius: "4px",
+                        borderLeft: "3px solid var(--primary-color)"
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
+                            <div style={{ fontSize: "0.85em", fontWeight: "bold", color: "var(--primary-color)" }}>
+                                📝 Selection Active
+                            </div>
+                            <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+                                <label style={{ fontSize: "0.85em", display: "flex", alignItems: "center", gap: "3px" }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={useSelection}
+                                        onChange={(e) => setUseSelection((e.target as HTMLInputElement).checked)}
+                                    />
+                                    Use
+                                </label>
+                                <button
+                                    className="btn btn-sm"
+                                    onClick={() => {
+                                        copilotSelection.clearSelection();
+                                        setActiveSelection(null);
+                                    }}
+                                    style={{ padding: "2px 6px", fontSize: "0.8em" }}
+                                    title="Clear selection"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                        <div style={{ fontSize: "0.8em", color: "var(--muted-text-color)", marginBottom: "3px" }}>
+                            From: <strong>{activeSelection.noteTitle}</strong>
+                        </div>
+                        <div style={{
+                            fontSize: "0.8em",
+                            fontStyle: "italic",
+                            color: "var(--main-text-color)",
+                            maxHeight: "60px",
+                            overflowY: "auto",
+                            padding: "5px",
+                            backgroundColor: "var(--accented-background-color)",
+                            borderRadius: "2px"
+                        }}>
+                            "{copilotSelection.formatSelection()}"
+                        </div>
+                    </div>
+                )}
                 
                 {/* Session Selector */}
                 <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
@@ -310,7 +394,11 @@ export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
                         value={prompt}
                         onChange={(e) => setPrompt((e.target as HTMLTextAreaElement).value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask Copilot to help with this note... (Ctrl/Cmd+Enter to send)"
+                        placeholder={
+                            activeSelection && useSelection
+                                ? "Ask about the selected text... (selection will be included automatically)"
+                                : "Ask Copilot to help with this note... (Ctrl/Cmd+Enter to send)"
+                        }
                         style={{
                             flex: 1,
                             minHeight: "80px",
@@ -329,6 +417,11 @@ export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
                 <div style={{ display: "flex", gap: "10px", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ fontSize: "0.85em", color: "var(--muted-text-color)" }}>
                         {sessionId ? "✓ Connected" : "Initializing..."}
+                        {activeSelection && useSelection && (
+                            <span style={{ marginLeft: "10px", color: "var(--primary-color)" }}>
+                                • Selection will be included
+                            </span>
+                        )}
                     </div>
                     <div style={{ display: "flex", gap: "10px" }}>
                         <button
@@ -336,7 +429,7 @@ export default function CopilotCanvas({ note, noteContext }: TypeWidgetProps) {
                             onClick={contextNotes.length > 0 ? handleChatWithContext : handleSendMessage}
                             disabled={!prompt.trim() || !sessionId || isProcessing}
                         >
-                            {isProcessing ? "Processing..." : "Send"}
+                            {isProcessing ? "Processing..." : activeSelection && useSelection ? "Send with Selection" : "Send"}
                         </button>
                     </div>
                 </div>
