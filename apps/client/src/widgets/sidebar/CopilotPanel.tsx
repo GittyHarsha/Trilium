@@ -47,14 +47,40 @@ export default function CopilotPanel() {
     const [pendingEdit, setPendingEdit] = useState<InlineEditSession | null>(null);
     const [contextNotes, setContextNotes] = useState<ContextNote[]>([]);
     const [noteSearchText, setNoteSearchText] = useState("");
+    const [copilotEnabled, setCopilotEnabled] = useState<boolean | null>(null); // null = checking, true/false = known
     const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    // Check copilot status on mount
+    useEffect(() => {
+        checkCopilotStatus();
+    }, []);
+
+    const checkCopilotStatus = async () => {
+        try {
+            const resp = await server.get("copilot/status");
+            if (resp.success) {
+                setCopilotEnabled(resp.enabled === true);
+                if (resp.enabled) {
+                    // Only load sessions if copilot is enabled
+                    loadSessions();
+                }
+            }
+        } catch (error) {
+            console.error("Failed to check copilot status:", error);
+            setCopilotEnabled(false);
+        }
+    };
 
     // Load sessions and find global session
     useEffect(() => {
-        loadSessions();
-    }, []);
+        if (copilotEnabled) {
+            loadSessions();
+        }
+    }, [copilotEnabled]);
 
     const loadSessions = async () => {
+        if (!copilotEnabled) return;
+        
         try {
             const resp = await server.get("copilot/sessions");
             if (resp.success && resp.sessions) {
@@ -94,6 +120,11 @@ export default function CopilotPanel() {
 
     // Create session if needed
     const ensureSession = async () => {
+        if (!copilotEnabled) {
+            toastService.showError("Copilot feature is not enabled. Please enable it in Options.");
+            return null;
+        }
+        
         if (sessionId) return sessionId;
         
         // Try to find global session
@@ -241,6 +272,42 @@ export default function CopilotPanel() {
             <RightPanelWidget id="copilot-panel" title="Copilot Assistant">
                 <div className="copilot-empty-state">
                     <p>No note selected</p>
+                </div>
+            </RightPanelWidget>
+        );
+    }
+
+    // Show checking state
+    if (copilotEnabled === null) {
+        return (
+            <RightPanelWidget id="copilot-panel" title="Copilot Assistant">
+                <div className="copilot-empty-state">
+                    <p>Checking Copilot status...</p>
+                </div>
+            </RightPanelWidget>
+        );
+    }
+
+    // Show disabled state with instructions
+    if (copilotEnabled === false) {
+        return (
+            <RightPanelWidget id="copilot-panel" title="Copilot Assistant">
+                <div className="copilot-empty-state">
+                    <h3>Copilot Feature Not Enabled</h3>
+                    <p>The GitHub Copilot integration is currently disabled.</p>
+                    <p><strong>To enable:</strong></p>
+                    <ol style={{ textAlign: "left", marginLeft: "20px" }}>
+                        <li>Go to <strong>Options</strong> → <strong>Advanced</strong></li>
+                        <li>Find the <strong>copilotEnabled</strong> option</li>
+                        <li>Set it to <strong>true</strong></li>
+                        <li>Restart or reload Trilium</li>
+                    </ol>
+                    <ActionButton
+                        icon="bx bx-refresh"
+                        text="Check Again"
+                        title="Check if copilot is now enabled"
+                        onClick={checkCopilotStatus}
+                    />
                 </div>
             </RightPanelWidget>
         );

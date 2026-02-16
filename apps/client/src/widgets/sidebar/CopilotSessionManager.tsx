@@ -47,8 +47,32 @@ export default function CopilotSessionManager() {
     const [sessions, setSessions] = useState<SessionMetadata[]>([]);
     const [globalSessionId, setGlobalSessionId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [copilotEnabled, setCopilotEnabled] = useState<boolean | null>(null); // null = checking
+
+    // Check copilot status on mount
+    useEffect(() => {
+        checkCopilotStatus();
+    }, []);
+
+    const checkCopilotStatus = async () => {
+        try {
+            const response = await server.get("copilot/status");
+            if (response.success) {
+                setCopilotEnabled(response.enabled === true);
+                if (response.enabled) {
+                    // Only load sessions if enabled
+                    loadSessions();
+                }
+            }
+        } catch (error) {
+            console.error("Failed to check copilot status:", error);
+            setCopilotEnabled(false);
+        }
+    };
 
     const loadSessions = async () => {
+        if (copilotEnabled === false) return;
+        
         try {
             const response = await server.get<SessionsResponse>("copilot/sessions");
             if (response.success) {
@@ -61,13 +85,20 @@ export default function CopilotSessionManager() {
     };
 
     useEffect(() => {
-        loadSessions();
-        // Refresh sessions every 10 seconds
-        const interval = setInterval(loadSessions, 10000);
-        return () => clearInterval(interval);
-    }, []);
+        if (copilotEnabled) {
+            loadSessions();
+            // Refresh sessions every 10 seconds
+            const interval = setInterval(loadSessions, 10000);
+            return () => clearInterval(interval);
+        }
+    }, [copilotEnabled]);
 
     const createGlobalSession = async () => {
+        if (!copilotEnabled) {
+            toastService.showError("Copilot feature is not enabled. Please enable it in Options.");
+            return;
+        }
+        
         setLoading(true);
         try {
             const response = await server.post("copilot/sessions", {
@@ -149,6 +180,37 @@ export default function CopilotSessionManager() {
             toastService.showError("Failed to close session");
         }
     };
+
+    // Show checking state
+    if (copilotEnabled === null) {
+        return (
+            <RightPanelWidget id="copilot-session-manager" title="Copilot Sessions">
+                <div className="copilot-session-empty">
+                    <p>Checking Copilot status...</p>
+                </div>
+            </RightPanelWidget>
+        );
+    }
+
+    // Show disabled state
+    if (copilotEnabled === false) {
+        return (
+            <RightPanelWidget id="copilot-session-manager" title="Copilot Sessions">
+                <div className="copilot-session-empty">
+                    <i className="bx bx-info-circle copilot-session-empty-icon"></i>
+                    <p className="copilot-session-empty-text">Copilot Not Enabled</p>
+                    <p className="copilot-session-empty-hint">Enable copilot in Options → Advanced</p>
+                    <button
+                        className="btn btn-sm btn-secondary"
+                        onClick={checkCopilotStatus}
+                        style={{ marginTop: "10px" }}
+                    >
+                        <i className="bx bx-refresh"></i> Check Again
+                    </button>
+                </div>
+            </RightPanelWidget>
+        );
+    }
 
     return (
         <RightPanelWidget
