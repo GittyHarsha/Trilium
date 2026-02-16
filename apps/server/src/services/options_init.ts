@@ -218,6 +218,10 @@ const defaultOptions: DefaultOption[] = [
     { name: "aiSystemPrompt", value: "", isSynced: true },
     { name: "aiSelectedProvider", value: "openai", isSynced: true },
 
+    // GitHub Copilot SDK Options
+    { name: "copilotEnabled", value: "false", isSynced: true },
+    { name: "copilotModel", value: "gpt-5", isSynced: true },
+
     {
         name: "seenCallToActions",
         value: JSON.stringify([
