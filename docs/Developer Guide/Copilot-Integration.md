@@ -4,9 +4,16 @@
 
 This integration adds **GitHub Copilot SDK** support to Trilium Notes, enabling agentic AI capabilities for note reading, editing, and manipulation across all note types. This provides a canvas-like interface similar to Gemini Canvas or ChatGPT Canvas, allowing AI to have complete control over the application.
 
-## Features Implemented
+## Key Features
 
-### 1. Core Copilot Service
+### 1. **Global Session Management**
+- **Session Manager Widget**: Right-panel UI for managing all Copilot sessions
+- **Global Sessions**: One session accessible across all notes
+- **Session Organization**: Name, rename, and organize sessions
+- **Activity Tracking**: See message counts, last activity times
+- **Quick Actions**: Set as global, rename, or close sessions
+
+### 2. Core Copilot Service
 - **Session Management**: Create, manage, and close Copilot sessions
 - **Model Selection**: Support for different LLM models (GPT-5, Claude Sonnet, etc.)
 - **Configuration**: User-configurable options for enabling/disabling Copilot
@@ -31,6 +38,13 @@ This integration adds **GitHub Copilot SDK** support to Trilium Notes, enabling 
 
 ### 3. API Endpoints
 
+#### Session Management APIs
+- `GET /api/copilot/sessions` - List all active sessions with metadata
+- `GET /api/copilot/sessions/:id/info` - Get session details
+- `POST /api/copilot/sessions` - Create new session (with name, model, isGlobal options)
+- `PATCH /api/copilot/sessions/:id` - Update session (rename or set as global)
+- `DELETE /api/copilot/sessions/:id` - Close session
+
 #### Copilot API Routes (`/api/copilot/*`)
 - `POST /api/copilot/sessions` - Create a new Copilot session
 - `POST /api/copilot/sessions/:sessionId/send` - Send message to session
@@ -46,11 +60,24 @@ This integration adds **GitHub Copilot SDK** support to Trilium Notes, enabling 
 A new note type `copilotCanvas` with a full-featured UI:
 - AI-assisted note editing interface
 - Context-aware chat with multiple notes
+- **Session selector**: Use existing or create new session
+- **Global session support**: Access global session from any note
 - Apply AI responses directly to notes
 - Copy responses to clipboard
 - Real-time processing indicators
 - Support for adding context from other notes
 - Session persistence
+
+#### Session Manager Widget (Right Panel)
+Always-visible widget in the right panel:
+- View all active Copilot sessions
+- Create new global sessions
+- Set any session as global (marked with 🌍)
+- Rename sessions inline
+- Close/delete sessions
+- See activity metadata (message count, last activity time)
+- Auto-refresh every 10 seconds
+- Visual distinction for global sessions
 
 ## Architecture
 
@@ -71,10 +98,13 @@ apps/server/src/
 
 ```
 apps/client/src/
-├── widgets/type_widgets/
-│   └── CopilotCanvas.tsx          # Copilot Canvas widget UI
+├── widgets/
+│   ├── type_widgets/
+│   │   └── CopilotCanvas.tsx          # Copilot Canvas widget UI
+│   └── sidebar/
+│       └── CopilotSessionManager.tsx  # Session management widget (right panel)
 └── services/
-    └── note_types.ts               # Note type registration
+    └── note_types.ts                   # Note type registration
 ```
 
 ### Shared Types
@@ -106,7 +136,35 @@ api.runOnBackend(() => {
 
 ## Usage
 
-### 1. Creating a Copilot Canvas Note
+### 1. **Managing Sessions**
+
+#### Opening the Session Manager
+The Session Manager appears in the right panel and is always available. It shows:
+- All active Copilot sessions
+- Global session indicator (🌍)
+- Session metadata (model, message count, last activity)
+- Quick actions for each session
+
+#### Creating a Global Session
+1. Open the right panel (if not visible)
+2. Find the "Copilot Sessions" widget
+3. Click "New Global Session"
+4. The global session can now be used from any note
+
+#### Using an Existing Session
+In a Copilot Canvas note:
+1. Check "Use existing session"
+2. Select a session from the dropdown
+3. Global sessions are marked with 🌍
+4. Start chatting with the selected session
+
+#### Managing Sessions
+- **Rename**: Click the ✏️ button on any session
+- **Set as Global**: Click "Set Global" to make it accessible everywhere
+- **Close**: Click ❌ to close a session (with confirmation)
+- **Auto-refresh**: Sessions update automatically every 10 seconds
+
+### 2. Creating a Copilot Canvas Note
 
 1. Right-click in the note tree
 2. Select "Create new note" → "Copilot Canvas"
@@ -281,6 +339,137 @@ The Copilot integration supports **all Trilium note types**:
 - [ ] Custom tool development framework
 - [ ] Integration with external AI services
 - [ ] Multi-agent collaboration
+
+## Session Management API Examples
+
+### List All Sessions
+```javascript
+// GET /api/copilot/sessions
+const response = await fetch('/api/copilot/sessions');
+const data = await response.json();
+
+// Response:
+{
+  "success": true,
+  "sessions": [
+    {
+      "sessionId": "session-123",
+      "model": "gpt-5",
+      "name": "Global Session",
+      "createdAt": 1708041600000,
+      "lastActivityAt": 1708042500000,
+      "messageCount": 12,
+      "isGlobal": true
+    },
+    {
+      "sessionId": "session-456",
+      "model": "gpt-5",
+      "name": "Research Session",
+      "createdAt": 1708040000000,
+      "lastActivityAt": 1708041000000,
+      "messageCount": 5,
+      "isGlobal": false
+    }
+  ],
+  "globalSessionId": "session-123",
+  "count": 2
+}
+```
+
+### Create a Global Session
+```javascript
+// POST /api/copilot/sessions
+const response = await fetch('/api/copilot/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        model: 'gpt-5',
+        name: 'My Global Session',
+        isGlobal: true
+    })
+});
+
+// Response:
+{
+  "success": true,
+  "sessionId": "session-789",
+  "model": "gpt-5",
+  "name": "My Global Session",
+  "isGlobal": true,
+  "availableTools": [...]
+}
+```
+
+### Set Session as Global
+```javascript
+// PATCH /api/copilot/sessions/:sessionId
+const response = await fetch('/api/copilot/sessions/session-456', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        setAsGlobal: true
+    })
+});
+
+// Response:
+{
+  "success": true,
+  "session": {
+    "sessionId": "session-456",
+    "model": "gpt-5",
+    "name": "Research Session",
+    "isGlobal": true
+  }
+}
+```
+
+### Rename Session
+```javascript
+// PATCH /api/copilot/sessions/:sessionId
+const response = await fetch('/api/copilot/sessions/session-456', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        name: 'Updated Session Name'
+    })
+});
+```
+
+### Get Session Details
+```javascript
+// GET /api/copilot/sessions/:sessionId/info
+const response = await fetch('/api/copilot/sessions/session-123/info');
+const data = await response.json();
+
+// Response:
+{
+  "success": true,
+  "session": {
+    "sessionId": "session-123",
+    "model": "gpt-5",
+    "name": "Global Session",
+    "createdAt": 1708041600000,
+    "lastActivityAt": 1708042500000,
+    "messageCount": 12,
+    "isGlobal": true
+  }
+}
+```
+
+### Close a Session
+```javascript
+// DELETE /api/copilot/sessions/:sessionId
+const response = await fetch('/api/copilot/sessions/session-456', {
+    method: 'DELETE'
+});
+
+// Response:
+{
+  "success": true,
+  "sessionId": "session-456",
+  "message": "Session closed successfully"
+}
+```
 
 ## Troubleshooting
 
