@@ -54,6 +54,29 @@ export async function sendMessage(req: Request, res: Response) {
             });
         }
 
+        // Build enhanced context with note contents
+        let enhancedPrompt = prompt;
+        if (context && context.contextNoteIds && Array.isArray(context.contextNoteIds) && context.contextNoteIds.length > 0) {
+            const { executeTool } = await import("../../services/copilot/tools/tool_registry.js");
+            
+            let contextContent = "\n\n=== CONTEXT NOTES ===\n";
+            for (const noteId of context.contextNoteIds) {
+                try {
+                    const noteData = await executeTool("read_note", { noteId, includeAttributes: false });
+                    if (noteData && noteData.title) {
+                        contextContent += `\n--- Note: ${noteData.title} (${noteData.type}) ---\n`;
+                        contextContent += noteData.content || "";
+                        contextContent += "\n";
+                    }
+                } catch (error) {
+                    log.info(`Could not read context note ${noteId}: ${error}`);
+                }
+            }
+            contextContent += "\n=== END CONTEXT NOTES ===\n\n";
+            
+            enhancedPrompt = contextContent + "User Query: " + prompt;
+        }
+
         // Prepare tools - merge requested tools with all available tools
         const availableTools = [...allTools, ...specializedTools, ...inlineEditTools];
         const toolsToUse = tools || availableTools.map(t => ({
@@ -63,7 +86,7 @@ export async function sendMessage(req: Request, res: Response) {
         }));
 
         // Send message with tools
-        const response = await copilotService.send(sessionId, prompt, {
+        const response = await copilotService.send(sessionId, enhancedPrompt, {
             streaming: streaming || false,
             tools: toolsToUse,
             context: context,

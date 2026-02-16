@@ -11,14 +11,21 @@ import copilotSelection from "../../services/copilot_selection";
 import copilotInlineEditor from "../../services/copilot_inline_editor";
 import RightPanelWidget from "./RightPanelWidget";
 import ActionButton from "../react/ActionButton";
+import NoteAutocomplete from "../react/NoteAutocomplete";
 import { useActiveNoteContext, useNoteProperty } from "../react/hooks";
 import type { SelectionInfo } from "../../services/copilot_selection";
 import type { InlineEditSession } from "../../services/copilot_inline_editor";
+import froca from "../../services/froca";
 
 interface SessionOption {
     sessionId: string;
     name: string;
     isGlobal: boolean;
+}
+
+interface ContextNote {
+    noteId: string;
+    title: string;
 }
 
 export default function CopilotPanel() {
@@ -35,6 +42,8 @@ export default function CopilotPanel() {
     const [useSelection, setUseSelection] = useState(true);
     const [inlineEditMode, setInlineEditMode] = useState(true);
     const [pendingEdit, setPendingEdit] = useState<InlineEditSession | null>(null);
+    const [contextNotes, setContextNotes] = useState<ContextNote[]>([]);
+    const [noteSearchText, setNoteSearchText] = useState("");
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     // Load sessions and find global session
@@ -110,6 +119,42 @@ export default function CopilotPanel() {
         return null;
     };
 
+    // Add note to context
+    const addContextNote = async (noteId: string) => {
+        if (!noteId) return;
+        
+        // Check if already in context
+        if (contextNotes.some(n => n.noteId === noteId)) {
+            toastService.showMessage("Note already in context");
+            return;
+        }
+
+        // Get note details
+        const contextNote = await froca.getNote(noteId);
+        if (!contextNote) {
+            toastService.showError("Note not found");
+            return;
+        }
+
+        setContextNotes([...contextNotes, {
+            noteId: noteId,
+            title: contextNote.title
+        }]);
+        setNoteSearchText("");
+        toastService.showMessage(`Added "${contextNote.title}" to context`);
+    };
+
+    // Remove note from context
+    const removeContextNote = (noteId: string) => {
+        setContextNotes(contextNotes.filter(n => n.noteId !== noteId));
+    };
+
+    // Clear all context notes
+    const clearContextNotes = () => {
+        setContextNotes([]);
+        toastService.showMessage("Context cleared");
+    };
+
     const handleSendMessage = async () => {
         if (!prompt.trim() || isProcessing || !note) {
             return;
@@ -138,7 +183,10 @@ export default function CopilotPanel() {
 
             const resp = await server.post(`copilot/sessions/${activeSessionId}/send`, {
                 prompt: fullPrompt,
-                context: { currentNoteId: note.noteId }
+                context: { 
+                    currentNoteId: note.noteId,
+                    contextNoteIds: contextNotes.map(n => n.noteId)
+                }
             });
 
             if (resp.success) {
@@ -208,11 +256,24 @@ export default function CopilotPanel() {
             <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: "400px" }}>
                 {/* Current Note Info */}
                 <div style={{ padding: "10px", backgroundColor: "var(--main-background-color)", borderBottom: "1px solid var(--main-border-color)" }}>
-                    <div style={{ fontSize: "0.85em", color: "var(--muted-text-color)", marginBottom: "5px" }}>
-                        Working on:
-                    </div>
-                    <div style={{ fontWeight: "bold", fontSize: "0.95em" }}>
-                        {noteTitle} <span style={{ color: "var(--muted-text-color)", fontSize: "0.9em" }}>({noteType})</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                            <div style={{ fontSize: "0.85em", color: "var(--muted-text-color)", marginBottom: "5px" }}>
+                                Working on:
+                            </div>
+                            <div style={{ fontWeight: "bold", fontSize: "0.95em" }}>
+                                {noteTitle} <span style={{ color: "var(--muted-text-color)", fontSize: "0.9em" }}>({noteType})</span>
+                            </div>
+                        </div>
+                        <button
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => note && addContextNote(note.noteId)}
+                            disabled={!note || contextNotes.some(n => n.noteId === note.noteId)}
+                            style={{ fontSize: "0.75em" }}
+                            title="Add current note to context"
+                        >
+                            + Context
+                        </button>
                     </div>
                 </div>
 
@@ -287,6 +348,79 @@ export default function CopilotPanel() {
                         </div>
                     </div>
                 )}
+
+                {/* Context Notes Selector */}
+                <div style={{ padding: "8px 10px", backgroundColor: "var(--main-background-color)", borderBottom: "1px solid var(--main-border-color)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
+                        <span style={{ fontSize: "0.85em", fontWeight: "bold" }}>
+                            📚 Context Notes ({contextNotes.length})
+                        </span>
+                        {contextNotes.length > 0 && (
+                            <button
+                                className="btn btn-sm"
+                                onClick={clearContextNotes}
+                                style={{ padding: "1px 6px", fontSize: "0.75em" }}
+                                title="Clear all context"
+                            >
+                                Clear All
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Add Note to Context */}
+                    <div style={{ display: "flex", gap: "5px", marginBottom: "8px" }}>
+                        <div style={{ flex: 1 }}>
+                            <NoteAutocomplete
+                                placeholder="Search notes to add as context..."
+                                text={noteSearchText}
+                                onTextChange={setNoteSearchText}
+                                noteIdChanged={(selectedNoteId) => {
+                                    if (selectedNoteId) {
+                                        addContextNote(selectedNoteId);
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* List of Context Notes */}
+                    {contextNotes.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            {contextNotes.map(ctxNote => (
+                                <div
+                                    key={ctxNote.noteId}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "4px 6px",
+                                        backgroundColor: "var(--accented-background-color)",
+                                        borderRadius: "3px",
+                                        fontSize: "0.8em"
+                                    }}
+                                >
+                                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        📄 {ctxNote.title}
+                                    </span>
+                                    <button
+                                        onClick={() => removeContextNote(ctxNote.noteId)}
+                                        style={{
+                                            border: "none",
+                                            background: "none",
+                                            cursor: "pointer",
+                                            padding: "0 4px",
+                                            color: "var(--muted-text-color)",
+                                            fontSize: "1.1em"
+                                        }}
+                                        title="Remove from context"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
                 {/* Chat Area */}
                 <div ref={chatContainerRef} style={{ flex: 1, overflowY: "auto", padding: "10px" }}>
@@ -424,6 +558,11 @@ export default function CopilotPanel() {
                             {sessionId ? (
                                 <>
                                     ✓ {availableSessions.find(s => s.sessionId === sessionId)?.name || "Connected"}
+                                    {contextNotes.length > 0 && (
+                                        <span style={{ marginLeft: "8px", color: "var(--primary-color)" }}>
+                                            • {contextNotes.length} context note{contextNotes.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
                                 </>
                             ) : "No session"}
                         </div>
