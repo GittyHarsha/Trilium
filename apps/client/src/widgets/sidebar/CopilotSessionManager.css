@@ -1,0 +1,74 @@
+/* Copilot Session Manager Styles */
+
+.copilot-sessions-content {
+    padding: 10px;
+}
+
+.copilot-sessions-create-button {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.copilot-session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.copilot-session-item {
+    padding: 10px;
+    border: 1px solid var(--main-border-color);
+    border-radius: 4px;
+}
+
+.copilot-session-item.global {
+    background-color: var(--accented-background-color);
+}
+
+.copilot-session-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.copilot-session-icon {
+    font-size: 1.2em;
+    margin-right: 8px;
+}
+
+.copilot-session-name {
+    flex: 1;
+    font-weight: bold;
+}
+
+.copilot-session-meta {
+    font-size: 0.85em;
+    color: var(--muted-text-color);
+    margin-bottom: 8px;
+}
+
+.copilot-session-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.copilot-session-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted-text-color);
+}
+
+.copilot-session-empty-icon {
+    font-size: 2em;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.copilot-session-empty-text {
+    margin-bottom: 5px;
+}
+
+.copilot-session-empty-hint {
+    font-size: 0.9em;
+}

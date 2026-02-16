@@ -36,6 +36,7 @@ import imageRoute from "./api/image.js";
 import importRoute from "./api/import.js";
 import keysRoute from "./api/keys.js";
 import llmRoute from "./api/llm.js";
+import copilotRoute from "./api/copilot.js";
 import loginApiRoute from "./api/login.js";
 import metricsRoute from "./api/metrics.js";
 import noteMapRoute from "./api/note_map.js";
@@ -378,6 +379,18 @@ function register(app: express.Application) {
     asyncApiRoute(DEL, "/api/llm/chat/:chatNoteId", llmRoute.deleteSession);
     asyncApiRoute(PST, "/api/llm/chat/:chatNoteId/messages", llmRoute.sendMessage);
     asyncApiRoute(PST, "/api/llm/chat/:chatNoteId/messages/stream", llmRoute.streamMessage);
+
+    // Copilot SDK API
+    asyncApiRoute(GET, "/api/copilot/status", copilotRoute.getStatus);
+    asyncApiRoute(GET, "/api/copilot/tools", copilotRoute.getTools);
+    asyncApiRoute(GET, "/api/copilot/sessions", copilotRoute.listSessions);
+    asyncApiRoute(GET, "/api/copilot/sessions/:sessionId/info", copilotRoute.getSessionInfo);
+    asyncApiRoute(PST, "/api/copilot/sessions", copilotRoute.createSession);
+    asyncApiRoute(PST, "/api/copilot/sessions/:sessionId/send", copilotRoute.sendMessage);
+    asyncApiRoute(PATCH, "/api/copilot/sessions/:sessionId", copilotRoute.updateSession);
+    asyncApiRoute(DEL, "/api/copilot/sessions/:sessionId", copilotRoute.closeSession);
+    asyncApiRoute(PST, "/api/copilot/tools/:toolName/execute", copilotRoute.executeToolDirectly);
+    asyncApiRoute(PST, "/api/copilot/chat-with-context", copilotRoute.chatWithContext);
 
     // LLM provider endpoints - moved under /api/llm/providers hierarchy
     asyncApiRoute(GET, "/api/llm/providers/ollama/models", ollamaRoute.listModels);

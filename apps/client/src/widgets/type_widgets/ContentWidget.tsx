@@ -12,6 +12,7 @@ import EtapiSettings from "./options/etapi";
 import BackupSettings from "./options/backup";
 import SyncOptions from "./options/sync";
 import AiSettings from "./options/ai_settings";
+import CopilotSettings from "./options/copilot_settings";
 import OtherSettings from "./options/other";
 import InternationalizationOptions from "./options/i18n";
 import AdvancedSettings from "./options/advanced";
@@ -19,7 +20,7 @@ import "./ContentWidget.css";
 import { t } from "../../services/i18n";
 import BackendLog from "./code/BackendLog";
 
-export type OptionPages = "_optionsAppearance" | "_optionsShortcuts" | "_optionsTextNotes" | "_optionsCodeNotes" | "_optionsImages" | "_optionsSpellcheck" | "_optionsPassword" | "_optionsMFA" | "_optionsEtapi" | "_optionsBackup" | "_optionsSync" | "_optionsAi" | "_optionsOther" | "_optionsLocalization" | "_optionsAdvanced";
+export type OptionPages = "_optionsAppearance" | "_optionsShortcuts" | "_optionsTextNotes" | "_optionsCodeNotes" | "_optionsImages" | "_optionsSpellcheck" | "_optionsPassword" | "_optionsMFA" | "_optionsEtapi" | "_optionsBackup" | "_optionsSync" | "_optionsAi" | "_optionsCopilot" | "_optionsOther" | "_optionsLocalization" | "_optionsAdvanced";
 
 const CONTENT_WIDGETS: Record<OptionPages | "_backendLog", (props: TypeWidgetProps) => JSX.Element> = {
     _optionsAppearance: AppearanceSettings,
@@ -34,6 +35,7 @@ const CONTENT_WIDGETS: Record<OptionPages | "_backendLog", (props: TypeWidgetPro
     _optionsBackup: BackupSettings,
     _optionsSync: SyncOptions,
     _optionsAi: AiSettings,
+    _optionsCopilot: CopilotSettings,
     _optionsOther: OtherSettings,
     _optionsLocalization: InternationalizationOptions,
     _optionsAdvanced: AdvancedSettings,

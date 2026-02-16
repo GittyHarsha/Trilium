@@ -149,6 +149,17 @@ export interface OptionDefinitions extends KeyboardShortcutsOptions<KeyboardActi
     openaiBaseUrl: string;
     anthropicApiKey: string;
     anthropicDefaultModel: string;
+    anthropicBaseUrl: string;
+    voyageApiKey: string;
+    ollamaEnabled: boolean;
+    ollamaDefaultModel: string;
+    ollamaBaseUrl: string;
+    aiSelectedProvider: string;
+
+    // GitHub Copilot SDK options
+    copilotEnabled: boolean;
+    copilotModel: string;
+    anthropicDefaultModel: string;
     voyageApiKey: string;
     anthropicBaseUrl: string;
     ollamaEnabled: boolean;
