@@ -4,6 +4,8 @@
  * Replaces the separate copilotCanvas note type with integrated assistant
  */
 
+import "./CopilotPanel.css";
+
 import { useEffect, useRef, useState } from "preact/hooks";
 import server from "../../services/server";
 import toastService from "../../services/toast";
@@ -16,6 +18,7 @@ import { useActiveNoteContext, useNoteProperty } from "../react/hooks";
 import type { SelectionInfo } from "../../services/copilot_selection";
 import type { InlineEditSession } from "../../services/copilot_inline_editor";
 import froca from "../../services/froca";
+import clsx from "clsx";
 
 interface SessionOption {
     sessionId: string;
@@ -236,7 +239,7 @@ export default function CopilotPanel() {
     if (!note) {
         return (
             <RightPanelWidget id="copilot-panel" title="Copilot Assistant">
-                <div style={{ padding: "20px", textAlign: "center", color: "var(--muted-text-color)" }}>
+                <div className="copilot-empty-state">
                     <p>No note selected</p>
                 </div>
             </RightPanelWidget>
@@ -256,23 +259,22 @@ export default function CopilotPanel() {
                 />
             }
         >
-            <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: "400px" }}>
+            <div className="copilot-panel">
                 {/* Current Note Info */}
-                <div style={{ padding: "10px", backgroundColor: "var(--main-background-color)", borderBottom: "1px solid var(--main-border-color)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="copilot-panel-header">
+                    <div className="copilot-panel-header-content">
                         <div>
-                            <div style={{ fontSize: "0.85em", color: "var(--muted-text-color)", marginBottom: "5px" }}>
+                            <div className="copilot-panel-note-info">
                                 Working on:
                             </div>
-                            <div style={{ fontWeight: "bold", fontSize: "0.95em" }}>
-                                {noteTitle} <span style={{ color: "var(--muted-text-color)", fontSize: "0.9em" }}>({noteType})</span>
+                            <div className="copilot-panel-note-title">
+                                {noteTitle} <span className="copilot-panel-note-type">({noteType})</span>
                             </div>
                         </div>
                         <button
                             className="btn btn-sm btn-secondary"
                             onClick={() => note && addContextNote(note.noteId)}
                             disabled={!note || contextNotes.some(n => n.noteId === note.noteId)}
-                            style={{ fontSize: "0.75em" }}
                             title="Add current note to context"
                         >
                             + Context
@@ -280,21 +282,13 @@ export default function CopilotPanel() {
                     </div>
                 </div>
 
+
                 {/* Settings Bar */}
-                <div style={{ padding: "8px 10px", backgroundColor: "var(--accented-background-color)", borderBottom: "1px solid var(--main-border-color)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div className="copilot-panel-settings">
                     {/* Session Selector */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "0.85em", minWidth: "55px" }}>Session:</span>
+                    <div className="copilot-panel-session-selector">
+                        <label>Session:</label>
                         <select
-                            style={{
-                                flex: 1,
-                                padding: "3px 6px",
-                                border: "1px solid var(--main-border-color)",
-                                borderRadius: "4px",
-                                backgroundColor: "var(--main-background-color)",
-                                color: "var(--main-text-color)",
-                                fontSize: "0.85em"
-                            }}
                             value={sessionId || ""}
                             onChange={(e) => setSessionId((e.target as HTMLSelectElement).value)}
                         >
@@ -308,28 +302,32 @@ export default function CopilotPanel() {
                     </div>
 
                     {/* Inline Edit Mode Toggle */}
-                    <label style={{ fontSize: "0.85em", display: "flex", alignItems: "center", gap: "5px", cursor: "pointer" }}
-                        title="Show diff preview before applying changes">
+                    <label 
+                        className={clsx("copilot-panel-inline-mode-toggle", {
+                            enabled: inlineEditMode,
+                            disabled: !inlineEditMode
+                        })}
+                        title="Show diff preview before applying changes"
+                    >
                         <input
                             type="checkbox"
                             checked={inlineEditMode}
                             onChange={(e) => setInlineEditMode((e.target as HTMLInputElement).checked)}
                         />
-                        <span style={{ color: inlineEditMode ? "var(--primary-color)" : "var(--muted-text-color)" }}>
-                            ✨ Inline Edit Mode
-                        </span>
+                        <span>✨ Inline Edit Mode</span>
                     </label>
                 </div>
 
+
                 {/* Active Selection */}
                 {activeSelection && (
-                    <div style={{ padding: "8px 10px", backgroundColor: "var(--info-background-color)", borderBottom: "1px solid var(--main-border-color)" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "3px" }}>
-                            <span style={{ fontSize: "0.85em", fontWeight: "bold", color: "var(--primary-color)" }}>
+                    <div className="copilot-selection-info">
+                        <div className="copilot-selection-header">
+                            <span className="copilot-selection-label">
                                 📝 Selection Active
                             </span>
-                            <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-                                <label style={{ fontSize: "0.8em", display: "flex", alignItems: "center", gap: "3px" }}>
+                            <div className="copilot-selection-controls">
+                                <label>
                                     <input
                                         type="checkbox"
                                         checked={useSelection}
@@ -340,29 +338,27 @@ export default function CopilotPanel() {
                                 <button
                                     className="btn btn-sm"
                                     onClick={() => copilotSelection.clearSelection()}
-                                    style={{ padding: "1px 4px", fontSize: "0.75em" }}
                                 >
                                     ✕
                                 </button>
                             </div>
                         </div>
-                        <div style={{ fontSize: "0.75em", fontStyle: "italic", color: "var(--muted-text-color)" }}>
+                        <div className="copilot-selection-text">
                             "{copilotSelection.formatSelection()}"
                         </div>
                     </div>
                 )}
 
                 {/* Context Notes Selector */}
-                <div style={{ padding: "8px 10px", backgroundColor: "var(--main-background-color)", borderBottom: "1px solid var(--main-border-color)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
-                        <span style={{ fontSize: "0.85em", fontWeight: "bold" }}>
+                <div className="copilot-context-section">
+                    <div className="copilot-context-header">
+                        <span className="copilot-context-title">
                             📚 Context Notes ({contextNotes.length})
                         </span>
                         {contextNotes.length > 0 && (
                             <button
                                 className="btn btn-sm"
                                 onClick={clearContextNotes}
-                                style={{ padding: "1px 6px", fontSize: "0.75em" }}
                                 title="Clear all context"
                             >
                                 Clear All
@@ -371,8 +367,8 @@ export default function CopilotPanel() {
                     </div>
 
                     {/* Add Note to Context */}
-                    <div style={{ display: "flex", gap: "5px", marginBottom: "8px" }}>
-                        <div style={{ flex: 1 }}>
+                    <div className="copilot-context-search">
+                        <div className="copilot-context-search-input">
                             <NoteAutocomplete
                                 placeholder="Search notes to add as context..."
                                 text={noteSearchText}
@@ -388,33 +384,15 @@ export default function CopilotPanel() {
 
                     {/* List of Context Notes */}
                     {contextNotes.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <div className="copilot-context-notes">
                             {contextNotes.map(ctxNote => (
-                                <div
-                                    key={ctxNote.noteId}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        padding: "4px 6px",
-                                        backgroundColor: "var(--accented-background-color)",
-                                        borderRadius: "3px",
-                                        fontSize: "0.8em"
-                                    }}
-                                >
-                                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                <div key={ctxNote.noteId} className="copilot-context-note">
+                                    <span className="copilot-context-note-title">
                                         📄 {ctxNote.title}
                                     </span>
                                     <button
+                                        className="copilot-context-note-remove"
                                         onClick={() => removeContextNote(ctxNote.noteId)}
-                                        style={{
-                                            border: "none",
-                                            background: "none",
-                                            cursor: "pointer",
-                                            padding: "0 4px",
-                                            color: "var(--muted-text-color)",
-                                            fontSize: "1.1em"
-                                        }}
                                         title="Remove from context"
                                     >
                                         ×
@@ -426,101 +404,77 @@ export default function CopilotPanel() {
                 </div>
 
                 {/* Chat Area */}
-                <div ref={chatContainerRef} style={{ flex: 1, overflowY: "auto", padding: "10px" }}>
+                <div ref={chatContainerRef} className="copilot-chat-area">
                     {/* Pending Inline Edit */}
                     {pendingEdit && !pendingEdit.applied && (
-                        <div style={{ marginBottom: "10px" }}>
-                            <div style={{ 
-                                padding: "10px", 
-                                backgroundColor: "var(--accented-background-color)", 
-                                borderRadius: "4px",
-                                border: "2px solid var(--primary-color)"
-                            }}>
-                                {(() => {
-                                    const summary = copilotInlineEditor.getChangeSummary();
-                                    const totalChanges = summary.added + summary.removed + summary.modified;
-                                    return (
-                                        <div style={{ marginBottom: "8px", fontWeight: "bold", color: "var(--primary-color)", fontSize: "0.9em" }}>
-                                            ✨ Proposed Changes ({totalChanges})
-                                        </div>
-                                    );
-                                })()}
-                                
-                                <div 
-                                    style={{ 
-                                        marginBottom: "10px",
-                                        padding: "8px",
-                                        backgroundColor: "var(--main-background-color)",
-                                        borderRadius: "2px",
-                                        maxHeight: "200px",
-                                        overflowY: "auto",
-                                        fontSize: "0.75em",
-                                        fontFamily: "monospace"
-                                    }}
-                                    dangerouslySetInnerHTML={{ __html: copilotInlineEditor.formatChangesAsHTML() }}
-                                />
+                        <div className="copilot-diff-preview">
+                            {(() => {
+                                const summary = copilotInlineEditor.getChangeSummary();
+                                const totalChanges = summary.added + summary.removed + summary.modified;
+                                return (
+                                    <div className="copilot-diff-header">
+                                        ✨ Proposed Changes ({totalChanges})
+                                    </div>
+                                );
+                            })()}
+                            
+                            <div 
+                                className="copilot-diff-content"
+                                dangerouslySetInnerHTML={{ __html: copilotInlineEditor.formatChangesAsHTML() }}
+                            />
 
-                                <div style={{ display: "flex", gap: "5px" }}>
-                                    <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={async () => {
-                                            const applied = await copilotInlineEditor.applyChanges(note!.noteId);
-                                            if (applied) {
-                                                setPendingEdit(null);
-                                            }
-                                        }}
-                                        style={{ fontSize: "0.8em" }}
-                                    >
-                                        ✓ Accept
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-danger"
-                                        onClick={() => {
-                                            copilotInlineEditor.rejectChanges();
+                            <div className="copilot-diff-buttons">
+                                <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={async () => {
+                                        const applied = await copilotInlineEditor.applyChanges(note!.noteId);
+                                        if (applied) {
                                             setPendingEdit(null);
-                                        }}
-                                        style={{ fontSize: "0.8em" }}
-                                    >
-                                        ✕ Reject
-                                    </button>
-                                </div>
+                                        }
+                                    }}
+                                >
+                                    ✓ Accept
+                                </button>
+                                <button
+                                    className="btn btn-sm btn-danger"
+                                    onClick={() => {
+                                        copilotInlineEditor.rejectChanges();
+                                        setPendingEdit(null);
+                                    }}
+                                >
+                                    ✕ Reject
+                                </button>
                             </div>
                         </div>
                     )}
 
                     {/* Response Area */}
                     {response && !pendingEdit && (
-                        <div style={{ marginBottom: "10px" }}>
-                            <div style={{ 
-                                padding: "10px", 
-                                backgroundColor: "var(--accented-background-color)", 
-                                borderRadius: "4px",
-                                borderLeft: "3px solid var(--main-text-color)"
-                            }}>
-                                <div style={{ marginBottom: "5px", fontWeight: "bold", fontSize: "0.85em" }}>
-                                    Response:
-                                </div>
-                                <div style={{ whiteSpace: "pre-wrap", fontSize: "0.85em", lineHeight: "1.4" }}>
-                                    {response}
-                                </div>
+                        <div className="copilot-response">
+                            <div className="copilot-response-header">
+                                Response:
+                            </div>
+                            <div className="copilot-response-content">
+                                {response}
                             </div>
                         </div>
                     )}
 
+
                     {isProcessing && (
-                        <div style={{ textAlign: "center", padding: "20px" }}>
+                        <div className="copilot-processing">
                             <div className="spinner-border spinner-border-sm" role="status"></div>
-                            <p style={{ marginTop: "8px", fontSize: "0.85em", color: "var(--muted-text-color)" }}>
+                            <p className="copilot-processing-text">
                                 Thinking...
                             </p>
                         </div>
                     )}
 
                     {!response && !isProcessing && !pendingEdit && (
-                        <div style={{ textAlign: "center", padding: "20px", color: "var(--muted-text-color)" }}>
-                            <div style={{ fontSize: "2em", marginBottom: "10px" }}>🤖</div>
-                            <p style={{ fontSize: "0.85em" }}>Ask me anything about this note</p>
-                            <p style={{ fontSize: "0.75em", marginTop: "5px" }}>
+                        <div className="copilot-empty-state">
+                            <div className="copilot-empty-state-icon">🤖</div>
+                            <p className="copilot-empty-state-text">Ask me anything about this note</p>
+                            <p className="copilot-empty-state-hint">
                                 {activeSelection ? "Selection will be included" : "Select text for context"}
                             </p>
                         </div>
@@ -528,7 +482,7 @@ export default function CopilotPanel() {
                 </div>
 
                 {/* Input Area */}
-                <div style={{ padding: "10px", borderTop: "1px solid var(--main-border-color)", backgroundColor: "var(--accented-background-color)" }}>
+                <div className="copilot-input-area">
                     <textarea
                         value={prompt}
                         onChange={(e) => setPrompt((e.target as HTMLTextAreaElement).value)}
@@ -540,29 +494,16 @@ export default function CopilotPanel() {
                                 ? "Request edits (will show diff)..."
                                 : "Ask me anything..."
                         }
-                        style={{
-                            width: "100%",
-                            minHeight: "60px",
-                            padding: "8px",
-                            border: "1px solid var(--main-border-color)",
-                            borderRadius: "4px",
-                            resize: "vertical",
-                            fontFamily: "inherit",
-                            fontSize: "0.9em",
-                            backgroundColor: "var(--main-background-color)",
-                            color: "var(--main-text-color)",
-                            marginBottom: "8px"
-                        }}
                         disabled={isProcessing}
                     />
                     
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: "0.75em", color: "var(--muted-text-color)" }}>
+                    <div className="copilot-input-footer">
+                        <div className="copilot-input-status">
                             {sessionId ? (
                                 <>
                                     ✓ {availableSessions.find(s => s.sessionId === sessionId)?.name || "Connected"}
                                     {contextNotes.length > 0 && (
-                                        <span style={{ marginLeft: "8px", color: "var(--primary-color)" }}>
+                                        <span className="context-count">
                                             • {contextNotes.length} context note{contextNotes.length !== 1 ? 's' : ''}
                                         </span>
                                     )}
@@ -573,7 +514,6 @@ export default function CopilotPanel() {
                             className="btn btn-sm btn-primary"
                             onClick={handleSendMessage}
                             disabled={!prompt.trim() || isProcessing}
-                            style={{ fontSize: "0.85em" }}
                         >
                             {isProcessing ? "..." : activeSelection && useSelection ? "Send with Selection" : "Send"}
                         </button>

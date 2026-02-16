@@ -3,11 +3,14 @@
  * Right panel widget for managing Copilot sessions
  */
 
+import "./CopilotSessionManager.css";
+
 import { useEffect, useState } from "preact/hooks";
 import server from "../../services/server";
 import toastService from "../../services/toast";
 import RightPanelWidget from "./RightPanelWidget";
 import ActionButton from "../react/ActionButton";
+import clsx from "clsx";
 
 interface SessionMetadata {
     sessionId: string;
@@ -160,10 +163,9 @@ export default function CopilotSessionManager() {
                 />
             }
         >
-            <div style={{ padding: "10px" }}>
+            <div className="copilot-sessions-content">
                 <button
-                    className="btn btn-sm btn-primary"
-                    style={{ width: "100%", marginBottom: "15px" }}
+                    className="btn btn-sm btn-primary copilot-sessions-create-button"
                     onClick={createGlobalSession}
                     disabled={loading}
                 >
@@ -171,35 +173,32 @@ export default function CopilotSessionManager() {
                 </button>
 
                 {sessions.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: "20px", color: "var(--muted-text-color)" }}>
-                        <i className="bx bx-ghost" style={{ fontSize: "2em", display: "block", marginBottom: "10px" }}></i>
-                        <p>No active sessions</p>
-                        <p style={{ fontSize: "0.9em" }}>Create a global session to get started</p>
+                    <div className="copilot-session-empty">
+                        <i className="bx bx-ghost copilot-session-empty-icon"></i>
+                        <p className="copilot-session-empty-text">No active sessions</p>
+                        <p className="copilot-session-empty-hint">Create a global session to get started</p>
                     </div>
                 ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div className="copilot-session-list">
                         {sessions.map(session => (
                             <div
                                 key={session.sessionId}
-                                style={{
-                                    padding: "10px",
-                                    border: "1px solid var(--main-border-color)",
-                                    borderRadius: "4px",
-                                    backgroundColor: session.isGlobal ? "var(--accented-background-color)" : "transparent"
-                                }}
+                                className={clsx("copilot-session-item", {
+                                    global: session.isGlobal
+                                })}
                             >
-                                <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
-                                    <span style={{ fontSize: "1.2em", marginRight: "8px" }}>
+                                <div className="copilot-session-header">
+                                    <span className="copilot-session-icon">
                                         {session.isGlobal ? "🌍" : "💬"}
                                     </span>
-                                    <strong style={{ flex: 1 }}>{session.name}</strong>
+                                    <strong className="copilot-session-name">{session.name}</strong>
                                 </div>
 
-                                <div style={{ fontSize: "0.85em", color: "var(--muted-text-color)", marginBottom: "8px" }}>
+                                <div className="copilot-session-meta">
                                     {session.model} • {session.messageCount} msgs • {formatTimestamp(session.lastActivityAt)}
                                 </div>
 
-                                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+                                <div className="copilot-session-buttons">
                                     {!session.isGlobal && (
                                         <button
                                             className="btn btn-sm btn-secondary"
