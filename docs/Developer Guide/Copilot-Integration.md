@@ -2,11 +2,29 @@
 
 ## Overview
 
-This integration adds **GitHub Copilot SDK** support to Trilium Notes, enabling agentic AI capabilities for note reading, editing, and manipulation across all note types. This provides a canvas-like interface similar to Gemini Canvas or ChatGPT Canvas, allowing AI to have complete control over the application.
+This integration adds **GitHub Copilot SDK** support to Trilium Notes as a **universal AI assistant** accessible from any note. Copilot provides agentic capabilities for reading, editing, and manipulating notes with inline editing, diff previews, and visual change indicators - similar to GitHub Copilot in VS Code.
 
 ## Key Features
 
-### 1. **Global Session Management**
+### 1. **Universal Integration - No Special Note Type**
+- Copilot works with **ALL note types** (text, code, mermaid, canvas, mindmap, etc.)
+- Accessible via **right panel widget** - always available
+- No need to create special "copilot notes"
+- Edit your notes where you work
+
+### 2. **Text Selection Auto-Context**
+- Select text anywhere in any note
+- Selection automatically captured as context
+- Visual indicator shows active selection
+- Toggle to use/ignore selection
+
+### 3. **Inline Editing with Visual Diff**
+- AI proposes changes with before/after preview
+- Diff highlighting shows additions/removals/modifications
+- Accept or reject changes before applying
+- No surprise edits - full transparency
+
+### 4. **Global Session Management**
 - **Session Manager Widget**: Right-panel UI for managing all Copilot sessions
 - **Global Sessions**: One session accessible across all notes
 - **Session Organization**: Name, rename, and organize sessions
@@ -98,13 +116,13 @@ apps/server/src/
 
 ```
 apps/client/src/
-├── widgets/
-│   ├── type_widgets/
-│   │   └── CopilotCanvas.tsx          # Copilot Canvas widget UI
-│   └── sidebar/
-│       └── CopilotSessionManager.tsx  # Session management widget (right panel)
+├── widgets/sidebar/
+│   ├── CopilotPanel.tsx            # Universal AI assistant (works with any note)
+│   └── CopilotSessionManager.tsx   # Session management widget
 └── services/
-    └── note_types.ts                   # Note type registration
+    ├── copilot_selection.ts         # Text selection tracking
+    ├── copilot_inline_editor.ts     # Inline edit & diff system
+    └── note_types.ts                # Note type registration
 ```
 
 ### Shared Types
@@ -151,39 +169,62 @@ The Session Manager appears in the right panel and is always available. It shows
 3. Click "New Global Session"
 4. The global session can now be used from any note
 
-#### Using an Existing Session
-In a Copilot Canvas note:
-1. Check "Use existing session"
-2. Select a session from the dropdown
-3. Global sessions are marked with 🌍
-4. Start chatting with the selected session
+### 1. **Managing Sessions**
 
-#### Managing Sessions
-- **Rename**: Click the ✏️ button on any session
-- **Set as Global**: Click "Set Global" to make it accessible everywhere
-- **Close**: Click ❌ to close a session (with confirmation)
-- **Auto-refresh**: Sessions update automatically every 10 seconds
+#### Opening the Session Manager
+The Session Manager appears in the right panel and is always available. It shows:
+- All active Copilot sessions
+- Global session indicator (🌍)
+- Session metadata (model, message count, last activity)
+- Quick actions for each session
 
-### 2. Creating a Copilot Canvas Note
+#### Creating a Global Session
+1. Open the right panel (if not visible)
+2. Find the "Copilot Sessions" widget
+3. Click "New Global Session"
+4. The global session can now be used from any note
 
-1. Right-click in the note tree
-2. Select "Create new note" → "Copilot Canvas"
-3. The Copilot Canvas widget will open with the AI interface
+#### Using Copilot Assistant
+The "Copilot Assistant" panel works with your current active note:
+1. Open any note (text, code, mermaid, etc.)
+2. Open right panel to see "Copilot Assistant"
+3. The assistant shows which note it's working on
+4. Select session (global or create new)
+5. Enable/disable inline edit mode
+6. Start chatting!
 
-### 2. Using the Copilot Canvas
+### 2. **Text Selection Workflow**
 
-#### Basic Chat
-1. Type your prompt in the input area
-2. Press Ctrl/Cmd+Enter or click "Send"
-3. View the AI response
-4. Click "Apply to Note" to insert the response into your current note
+1. **Select text** in any note (just highlight with mouse)
+2. **Copilot Panel shows** "📝 Selection Active"
+3. **Ask query** about the selection (e.g., "Explain this", "Make it shorter")
+4. **AI responds** with context of your selection
+5. **Clear selection** when done or uncheck "Use" to ignore
 
-#### Context-Aware Chat
-1. Add note IDs to the context (future enhancement: UI for note selection)
-2. The AI will have access to the content of those notes
-3. Ask questions or request edits based on that context
+Example:
+- Select a code function
+- Ask: "Add JSDoc comments to this"
+- AI proposes inline edit with comments added
+- Review diff, accept or reject
 
-### 3. Tool Usage Examples
+### 3. **Inline Editing Workflow**
+
+#### When Inline Edit Mode is ON (✨):
+1. Ask Copilot to edit (e.g., "Fix typos in this paragraph")
+2. AI uses `propose_inline_edit` tool
+3. **Diff preview appears** showing changes:
+   - `+ Green` for additions
+   - `- Red strikethrough` for deletions  
+   - `~ Yellow` for modifications
+4. Click **"Accept"** to apply or **"Reject"** to discard
+5. Changes apply directly to the note editor
+
+#### When Inline Edit Mode is OFF:
+1. AI returns suggestions as text
+2. You manually copy/apply as needed
+3. Traditional chat-style interaction
+
+### 4. **Tool Usage Examples**
 
 #### Via API
 ```javascript
@@ -232,6 +273,50 @@ The Copilot integration supports **all Trilium note types**:
 - **image** - Images
 
 ## Tool Details
+
+### Inline Edit Tools (New)
+
+#### Propose Inline Edit Tool
+```json
+{
+    "name": "propose_inline_edit",
+    "description": "Propose changes to note content with diff preview",
+    "parameters": {
+        "noteId": "string (required)",
+        "proposedContent": "string (required) - The new content",
+        "changeDescription": "string (optional) - Description of changes"
+    }
+}
+```
+
+Returns: Original content, proposed content, and change description for diff preview.
+
+#### Apply Inline Edit Tool
+```json
+{
+    "name": "apply_inline_edit",
+    "description": "Apply changes immediately without preview",
+    "parameters": {
+        "noteId": "string (required)",
+        "newContent": "string (required)",
+        "streaming": "boolean (optional) - For streaming edits"
+    }
+}
+```
+
+#### Apply Partial Edit Tool
+```json
+{
+    "name": "apply_partial_edit",
+    "description": "Edit specific line ranges in a note",
+    "parameters": {
+        "noteId": "string (required)",
+        "lineStart": "number (required) - 0-indexed",
+        "lineEnd": "number (required) - 0-indexed",
+        "newContent": "string (required) - Replacement content"
+    }
+}
+```
 
 ### Read Note Tool
 ```json
