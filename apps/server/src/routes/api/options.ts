@@ -118,7 +118,11 @@ const ALLOWED_OPTIONS = new Set<OptionNames>([
     "ollamaBaseUrl",
     "ollamaDefaultModel",
     "mfaEnabled",
-    "mfaMethod"
+    "mfaMethod",
+    
+    // GitHub Copilot integration options
+    "copilotEnabled",
+    "copilotModel"
 ]);
 
 function getOptions() {
