@@ -9,6 +9,7 @@ import { allTools, executeTool, getToolDefinitions } from "../../services/copilo
 import { specializedTools, getSpecializedToolDefinitions } from "../../services/copilot/tools/specialized_tools.js";
 import { inlineEditTools, getInlineEditToolDefinitions } from "../../services/copilot/tools/inline_edit_tools.js";
 import log from "../../services/log.js";
+import optionsService from "../../services/options.js";
 
 /**
  * Create a new copilot session
@@ -16,6 +17,16 @@ import log from "../../services/log.js";
  */
 export async function createSession(req: Request, res: Response) {
     try {
+        // Check if copilot is enabled
+        const enabled = optionsService.getOptionBool("copilotEnabled");
+        if (!enabled) {
+            return [400, {
+                success: false,
+                error: "Copilot feature is not enabled. Please enable it in Options under 'Advanced' settings.",
+                hint: "Set 'copilotEnabled' option to 'true' to use GitHub Copilot integration."
+            }];
+        }
+
         const { model, name, isGlobal } = req.body;
         const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -33,7 +44,7 @@ export async function createSession(req: Request, res: Response) {
         log.error(`Error creating copilot session: ${error}`);
         return [500, {
             success: false,
-            error: `Failed to create session: ${error}`
+            error: `Failed to create session: ${error instanceof Error ? error.message : String(error)}`
         }];
     }
 }
@@ -216,11 +227,13 @@ export async function closeSession(req: Request, res: Response) {
  */
 export function getStatus(req: Request, res: Response) {
     try {
+        const enabled = optionsService.getOptionBool("copilotEnabled");
         const isReady = copilotService.isReady();
         const activeSessions = copilotService.getActiveSessions();
 
         return {
             success: true,
+            enabled: enabled,
             ready: isReady,
             activeSessions: activeSessions,
             sessionCount: activeSessions.length

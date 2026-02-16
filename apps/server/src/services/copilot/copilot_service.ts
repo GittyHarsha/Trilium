@@ -88,7 +88,11 @@ class CopilotService extends EventEmitter {
         await this.init();
 
         if (!this.client) {
-            throw new Error("Copilot client not initialized");
+            const enabled = optionsService.getOptionBool("copilotEnabled");
+            if (!enabled) {
+                throw new Error("Copilot service is not enabled. Please enable 'copilotEnabled' option in settings.");
+            }
+            throw new Error("Copilot client not initialized. Please check server logs for initialization errors.");
         }
 
         // Check if session already exists
