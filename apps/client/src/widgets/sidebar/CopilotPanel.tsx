@@ -299,13 +299,15 @@ export default function CopilotPanel() {
                                 borderRadius: "4px",
                                 border: "2px solid var(--primary-color)"
                             }}>
-                                <div style={{ marginBottom: "8px", fontWeight: "bold", color: "var(--primary-color)", fontSize: "0.9em" }}>
-                                    ✨ Proposed Changes {(() => {
-                                        const summary = copilotInlineEditor.getChangeSummary();
-                                        const total = summary.added + summary.removed + summary.modified;
-                                        return `(${total})`;
-                                    })()}
-                                </div>
+                                {(() => {
+                                    const summary = copilotInlineEditor.getChangeSummary();
+                                    const totalChanges = summary.added + summary.removed + summary.modified;
+                                    return (
+                                        <div style={{ marginBottom: "8px", fontWeight: "bold", color: "var(--primary-color)", fontSize: "0.9em" }}>
+                                            ✨ Proposed Changes ({totalChanges})
+                                        </div>
+                                    );
+                                })()}
                                 
                                 <div 
                                     style={{ 

@@ -169,20 +169,6 @@ The Session Manager appears in the right panel and is always available. It shows
 3. Click "New Global Session"
 4. The global session can now be used from any note
 
-### 1. **Managing Sessions**
-
-#### Opening the Session Manager
-The Session Manager appears in the right panel and is always available. It shows:
-- All active Copilot sessions
-- Global session indicator (🌍)
-- Session metadata (model, message count, last activity)
-- Quick actions for each session
-
-#### Creating a Global Session
-1. Open the right panel (if not visible)
-2. Find the "Copilot Sessions" widget
-3. Click "New Global Session"
-4. The global session can now be used from any note
 
 #### Using Copilot Assistant
 The "Copilot Assistant" panel works with your current active note:
