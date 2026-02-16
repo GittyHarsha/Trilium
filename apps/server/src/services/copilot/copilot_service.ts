@@ -1,6 +1,6 @@
 import { CopilotClient, CopilotSession } from "@github/copilot-sdk";
-import log from "../log.ts";
-import optionsService from "../options.ts";
+import log from "../log.js";
+import optionsService from "../options.js";
 import EventEmitter from "events";
 
 /**

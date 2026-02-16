@@ -3,11 +3,11 @@
  * Registers all available tools that Copilot can use to interact with Trilium
  */
 
-import becca from "../../../becca/becca.ts";
-import noteService from "../../notes.ts";
-import searchService from "../../search/services/search.ts";
-import log from "../../log.ts";
-import type { BNote } from "../../../becca/entities/bnote.ts";
+import becca from "../../../becca/becca.js";
+import noteService from "../../notes.js";
+import searchService from "../../search/services/search.js";
+import log from "../../log.js";
+import BNote from "../../../becca/entities/bnote.js";
 
 /**
  * Read a note's content
@@ -402,7 +402,7 @@ export const deleteNoteTool = {
 
             // Delete the note via its branch
             const branch = branches[0];
-            branch.deleteBranch(params.deleteChildren !== false);
+            branch.deleteBranch();
 
             return {
                 success: true,

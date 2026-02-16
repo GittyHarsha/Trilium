@@ -4,10 +4,10 @@
  */
 
 import type { Request, Response } from "express";
-import copilotService from "../../services/copilot/copilot_service.ts";
-import { allTools, executeTool, getToolDefinitions } from "../../services/copilot/tools/tool_registry.ts";
-import { specializedTools, getSpecializedToolDefinitions } from "../../services/copilot/tools/specialized_tools.ts";
-import log from "../../services/log.ts";
+import copilotService from "../../services/copilot/copilot_service.js";
+import { allTools, executeTool, getToolDefinitions } from "../../services/copilot/tools/tool_registry.js";
+import { specializedTools, getSpecializedToolDefinitions } from "../../services/copilot/tools/specialized_tools.js";
+import log from "../../services/log.js";
 
 /**
  * Create a new copilot session
@@ -77,7 +77,7 @@ export async function sendMessage(req: Request, res: Response) {
         } else {
             // Process tool calls if any
             if (response.toolCalls && response.toolCalls.length > 0) {
-                const toolResults = [];
+                const toolResults: Array<{toolCall: string; result: any}> = [];
                 for (const toolCall of response.toolCalls) {
                     const result = await executeTool(toolCall.function.name, toolCall.function.arguments);
                     toolResults.push({
@@ -222,7 +222,7 @@ export async function chatWithContext(req: Request, res: Response) {
         // Build context from selected notes
         let context = "";
         if (noteIds && Array.isArray(noteIds)) {
-            const noteContents = [];
+            const noteContents: Array<{noteId: any; title: any; type: any; content: any}> = [];
             for (const noteId of noteIds) {
                 const readResult = await executeTool("read_note", { noteId, includeAttributes: true });
                 if (readResult.noteId) {
@@ -275,3 +275,13 @@ export async function chatWithContext(req: Request, res: Response) {
         });
     }
 }
+
+export default {
+    createSession,
+    sendMessage,
+    executeToolDirectly,
+    getTools,
+    closeSession,
+    getStatus,
+    chatWithContext
+};

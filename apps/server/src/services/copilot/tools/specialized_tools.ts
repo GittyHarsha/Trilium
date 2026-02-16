@@ -2,8 +2,8 @@
  * Specialized tools for manipulating Mermaid, Canvas, and MindMap notes
  */
 
-import becca from "../../../becca/becca.ts";
-import log from "../../log.ts";
+import becca from "../../../becca/becca.js";
+import log from "../../log.js";
 
 /**
  * Update Mermaid diagram content
@@ -115,7 +115,7 @@ export const updateCanvasTool = {
                 try {
                     canvasData = JSON.parse(existingContent.toString());
                 } catch (e) {
-                    log.warn("Could not parse existing canvas content, starting fresh");
+                    log.info("Could not parse existing canvas content, starting fresh");
                 }
             }
 
@@ -406,7 +406,7 @@ export const addCanvasElementTool = {
                 try {
                     canvasData = JSON.parse(existingContent.toString());
                 } catch (e) {
-                    log.warn("Could not parse existing canvas content");
+                    log.info("Could not parse existing canvas content");
                 }
             }
 
