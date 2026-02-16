@@ -21,20 +21,20 @@ export async function createSession(req: Request, res: Response) {
 
         const session = await copilotService.createSession(sessionId, model, name, isGlobal);
 
-        res.json({
+        return {
             success: true,
             sessionId: sessionId,
             model: model || "default",
             name: name || sessionId,
             isGlobal: isGlobal || false,
             availableTools: [...getToolDefinitions(), ...getSpecializedToolDefinitions(), ...getInlineEditToolDefinitions()]
-        });
+        };
     } catch (error) {
         log.error(`Error creating copilot session: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to create session: ${error}`
-        });
+        }];
     }
 }
 
@@ -48,10 +48,10 @@ export async function sendMessage(req: Request, res: Response) {
         const { prompt, streaming, context, tools } = req.body;
 
         if (!prompt) {
-            return res.status(400).json({
+            return [400, {
                 success: false,
                 error: "Prompt is required"
-            });
+            }];
         }
 
         // Build enhanced context with note contents
@@ -101,6 +101,9 @@ export async function sendMessage(req: Request, res: Response) {
         if (streaming) {
             res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
             res.end();
+            // Mark response as handled to prevent double-response
+            (res as any).triliumResponseHandled = true;
+            return;
         } else {
             // Process tool calls if any
             if (response.toolCalls && response.toolCalls.length > 0) {
@@ -113,26 +116,26 @@ export async function sendMessage(req: Request, res: Response) {
                     });
                 }
 
-                res.json({
+                return {
                     success: true,
                     response: response.message || response.text || "",
                     toolCalls: toolResults,
                     sessionId: sessionId
-                });
+                };
             } else {
-                res.json({
+                return {
                     success: true,
                     response: response.message || response.text || response,
                     sessionId: sessionId
-                });
+                };
             }
         }
     } catch (error) {
         log.error(`Error sending message to copilot: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to send message: ${error}`
-        });
+        }];
     }
 }
 
@@ -147,17 +150,17 @@ export async function executeToolDirectly(req: Request, res: Response) {
 
         const result = await executeTool(toolName, params);
 
-        res.json({
+        return {
             success: true,
             tool: toolName,
             result: result
-        });
+        };
     } catch (error) {
         log.error(`Error executing tool: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to execute tool: ${error}`
-        });
+        }];
     }
 }
 
@@ -169,17 +172,17 @@ export function getTools(req: Request, res: Response) {
     try {
         const allToolDefs = [...getToolDefinitions(), ...getSpecializedToolDefinitions(), ...getInlineEditToolDefinitions()];
 
-        res.json({
+        return {
             success: true,
             count: allToolDefs.length,
             tools: allToolDefs
-        });
+        };
     } catch (error) {
         log.error(`Error getting tools: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to get tools: ${error}`
-        });
+        }];
     }
 }
 
@@ -193,17 +196,17 @@ export async function closeSession(req: Request, res: Response) {
 
         await copilotService.closeSession(sessionId);
 
-        res.json({
+        return {
             success: true,
             sessionId: sessionId,
             message: "Session closed successfully"
-        });
+        };
     } catch (error) {
         log.error(`Error closing copilot session: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to close session: ${error}`
-        });
+        }];
     }
 }
 
@@ -216,18 +219,18 @@ export function getStatus(req: Request, res: Response) {
         const isReady = copilotService.isReady();
         const activeSessions = copilotService.getActiveSessions();
 
-        res.json({
+        return {
             success: true,
             ready: isReady,
             activeSessions: activeSessions,
             sessionCount: activeSessions.length
-        });
+        };
     } catch (error) {
         log.error(`Error getting copilot status: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to get status: ${error}`
-        });
+        }];
     }
 }
 
@@ -240,10 +243,10 @@ export async function chatWithContext(req: Request, res: Response) {
         const { prompt, noteIds, sessionId, streaming } = req.body;
 
         if (!prompt) {
-            return res.status(400).json({
+            return [400, {
                 success: false,
                 error: "Prompt is required"
-            });
+            }];
         }
 
         // Build context from selected notes
@@ -286,20 +289,23 @@ export async function chatWithContext(req: Request, res: Response) {
         if (streaming) {
             res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
             res.end();
+            // Mark response as handled to prevent double-response
+            (res as any).triliumResponseHandled = true;
+            return;
         } else {
-            res.json({
+            return {
                 success: true,
                 response: response.message || response.text || response,
                 sessionId: effectiveSessionId,
                 contextNoteCount: noteIds?.length || 0
-            });
+            };
         }
     } catch (error) {
         log.error(`Error in chat with context: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to process chat: ${error}`
-        });
+        }];
     }
 }
 
@@ -313,18 +319,18 @@ export function listSessions(req: Request, res: Response) {
         const globalSessionId = copilotService.getGlobalSession() ? 
             sessions.find(s => s.isGlobal)?.sessionId : null;
 
-        res.json({
+        return {
             success: true,
             sessions: sessions,
             globalSessionId: globalSessionId,
             count: sessions.length
-        });
+        };
     } catch (error) {
         log.error(`Error listing sessions: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to list sessions: ${error}`
-        });
+        }];
     }
 }
 
@@ -338,13 +344,13 @@ export function getSessionInfo(req: Request, res: Response) {
         const metadata = copilotService.getSessionMetadata(sessionId);
 
         if (!metadata) {
-            return res.status(404).json({
+            return [404, {
                 success: false,
                 error: `Session not found: ${sessionId}`
-            });
+            }];
         }
 
-        res.json({
+        return {
             success: true,
             session: {
                 sessionId: metadata.sessionId,
@@ -355,13 +361,13 @@ export function getSessionInfo(req: Request, res: Response) {
                 messageCount: metadata.messageCount,
                 isGlobal: metadata.isGlobal
             }
-        });
+        };
     } catch (error) {
         log.error(`Error getting session info: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to get session info: ${error}`
-        });
+        }];
     }
 }
 
@@ -384,7 +390,7 @@ export function updateSession(req: Request, res: Response) {
 
         const metadata = copilotService.getSessionMetadata(sessionId);
 
-        res.json({
+        return {
             success: true,
             session: metadata ? {
                 sessionId: metadata.sessionId,
@@ -392,13 +398,13 @@ export function updateSession(req: Request, res: Response) {
                 name: metadata.name,
                 isGlobal: metadata.isGlobal
             } : null
-        });
+        };
     } catch (error) {
         log.error(`Error updating session: ${error}`);
-        res.status(500).json({
+        return [500, {
             success: false,
             error: `Failed to update session: ${error}`
-        });
+        }];
     }
 }
 
