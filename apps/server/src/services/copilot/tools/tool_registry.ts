@@ -453,6 +453,20 @@ export function getToolDefinitions() {
 export async function executeTool(name: string, params: any) {
     const tool = getTool(name);
     if (!tool) {
+        // Check inline edit tools
+        const { inlineEditTools } = await import("./inline_edit_tools.js");
+        const inlineTool = inlineEditTools.find(t => t.name === name);
+        if (inlineTool) {
+            return await inlineTool.handler(params);
+        }
+        
+        // Check specialized tools
+        const { getSpecializedTool } = await import("./specialized_tools.js");
+        const specializedTool = getSpecializedTool(name);
+        if (specializedTool) {
+            return await specializedTool.handler(params);
+        }
+        
         throw new Error(`Tool not found: ${name}`);
     }
 

@@ -7,6 +7,7 @@ import type { Request, Response } from "express";
 import copilotService from "../../services/copilot/copilot_service.js";
 import { allTools, executeTool, getToolDefinitions } from "../../services/copilot/tools/tool_registry.js";
 import { specializedTools, getSpecializedToolDefinitions } from "../../services/copilot/tools/specialized_tools.js";
+import { inlineEditTools, getInlineEditToolDefinitions } from "../../services/copilot/tools/inline_edit_tools.js";
 import log from "../../services/log.js";
 
 /**
@@ -26,7 +27,7 @@ export async function createSession(req: Request, res: Response) {
             model: model || "default",
             name: name || sessionId,
             isGlobal: isGlobal || false,
-            availableTools: [...getToolDefinitions(), ...getSpecializedToolDefinitions()]
+            availableTools: [...getToolDefinitions(), ...getSpecializedToolDefinitions(), ...getInlineEditToolDefinitions()]
         });
     } catch (error) {
         log.error(`Error creating copilot session: ${error}`);
@@ -54,7 +55,7 @@ export async function sendMessage(req: Request, res: Response) {
         }
 
         // Prepare tools - merge requested tools with all available tools
-        const availableTools = [...allTools, ...specializedTools];
+        const availableTools = [...allTools, ...specializedTools, ...inlineEditTools];
         const toolsToUse = tools || availableTools.map(t => ({
             name: t.name,
             description: t.description,
@@ -142,7 +143,7 @@ export async function executeToolDirectly(req: Request, res: Response) {
  */
 export function getTools(req: Request, res: Response) {
     try {
-        const allToolDefs = [...getToolDefinitions(), ...getSpecializedToolDefinitions()];
+        const allToolDefs = [...getToolDefinitions(), ...getSpecializedToolDefinitions(), ...getInlineEditToolDefinitions()];
 
         res.json({
             success: true,
