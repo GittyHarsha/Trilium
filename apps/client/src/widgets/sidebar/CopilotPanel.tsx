@@ -140,7 +140,10 @@ export default function CopilotPanel() {
             noteId: noteId,
             title: contextNote.title
         }]);
+        
+        // Clear the search text to reset autocomplete
         setNoteSearchText("");
+        
         toastService.showMessage(`Added "${contextNote.title}" to context`);
     };
 

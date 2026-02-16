@@ -69,12 +69,13 @@ export async function sendMessage(req: Request, res: Response) {
                         contextContent += "\n";
                     }
                 } catch (error) {
-                    log.info(`Could not read context note ${noteId}: ${error}`);
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    log.info(`Could not read context note ${noteId}: ${errorMsg} (Note may not exist, be protected, or be inaccessible)`);
                 }
             }
             contextContent += "\n=== END CONTEXT NOTES ===\n\n";
             
-            enhancedPrompt = contextContent + "User Query: " + prompt;
+            enhancedPrompt = `${contextContent}User Query: ${prompt}`;
         }
 
         // Prepare tools - merge requested tools with all available tools
