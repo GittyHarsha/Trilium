@@ -144,10 +144,16 @@ Note 2 (Summary.txt):
 - "Add annotations to this canvas"
 
 ### Research & Analysis
-- "Summarize key points from these papers" (with selection)
-- "Compare approaches in sections A and B"
-- "Extract all action items"
-- "Create outline from this content"
+- "What are the common themes?" (add multiple papers to context)
+- "Compare approaches in sections A and B" (add 2 notes)
+- "Extract all action items" (add meeting notes)
+- "Create outline from this content" (add research notes)
+
+### Multi-Note Queries
+- "Summarize findings from all these papers" (add 5 paper notes)
+- "What's the relationship between these concepts?" (add related notes)
+- "Create a synthesis note" (add multiple source notes)
+- "Find contradictions across these documents" (add conflicting sources)
 
 ### Organization
 - "Suggest tags for this note"
@@ -170,6 +176,32 @@ Note 2 (Summary.txt):
 - ☑️ "Use" checkbox - include selection or not
 - ❌ "Clear" button - remove selection
 - Preview shows: `"text..." from Note: Title`
+
+### Context Note Selection
+
+**How it works:**
+- Add any notes to context via search
+- AI reads all context notes when responding
+- Perfect for multi-document queries
+- Visual list shows all context notes
+
+**Adding notes:**
+1. Type in "Search notes to add..." field
+2. Autocomplete shows matching notes
+3. Select a note → added to context
+4. Or click "+ Context" to add current note
+
+**Managing:**
+- Click × to remove individual notes
+- Click "Clear All" to remove all
+- Count shown: "📚 Context Notes (3)"
+- Status shows: "• 3 context notes"
+
+**Use cases:**
+- Research: Add multiple papers, ask for synthesis
+- Code review: Add related files for analysis  
+- Meeting notes: Add several meetings, extract action items
+- Documentation: Add API notes, generate docs
 
 ### Inline Edit Mode
 
@@ -242,24 +274,37 @@ AI can chain multiple tools:
 
 ### Context Building
 
-Copilot builds context from:
-- Current note content
-- Selected text (if any)
-- Note type (text, code, etc.)
-- Your query
+Copilot builds context from multiple sources:
+- **Current note content** - Always included
+- **Context notes** - Any notes you add via selector
+- **Selected text** - If you've highlighted text (if "Use" is checked)
+- **Note type** - Text, code, mermaid, etc.
+- **Your query** - The question you ask
 
 **Example context sent to AI:**
 ```
-Selected text from "Research Paper":
+=== CONTEXT NOTES ===
+
+--- Note: Research Paper.pdf (file) ---
+[Content of research paper...]
+
+--- Note: Background Info.txt (text) ---
+[Background information content...]
+
+=== END CONTEXT NOTES ===
+
+Selected text from "Current Note":
 ---
 Lorem ipsum dolor sit amet...
 ---
 
 Current note type: text
-Current note title: Summary Notes
+Current note title: Analysis Document
 
-User Query: Explain the main finding
+User Query: How do the findings relate to this excerpt?
 ```
+
+**All of this is combined automatically!**
 
 ---
 
@@ -279,6 +324,29 @@ User Query: Explain the main finding
 
 ### Q: Can I have multiple sessions?
 **A:** Yes! Create as many as you want and switch between them.
+
+### Q: How do I add multiple notes as context?
+**A:** Use the "📚 Context Notes" section in Copilot Panel:
+1. Type note title in search field
+2. Select from autocomplete
+3. Note added to context list
+4. Repeat for more notes
+5. Or click "+ Context" to add current note
+
+### Q: What's the difference between context notes and text selection?
+**A:** 
+- **Context Notes**: Full notes added as background (can be multiple)
+- **Text Selection**: Specific excerpt you highlight (usually from current note)
+- **Both work together**: AI gets context notes + selection + current note
+
+### Q: How many context notes can I add?
+**A:** No hard limit, but keep it reasonable (5-10 notes) for best AI performance. Too much context can confuse the AI.
+
+### Q: Does AI read the full content of context notes?
+**A:** Yes! AI gets the complete content of all context notes. Be selective about what you add.
+
+### Q: Can I save context note lists?
+**A:** Not yet - context notes are per-session. Future enhancement could save context presets.
 
 ### Q: What happens when I close Trilium?
 **A:** Sessions are recreated on restart (if SDK supports it). This may vary by SDK version.
@@ -323,7 +391,7 @@ User Query: Explain the main finding
 
 ## 💬 Example Conversations
 
-### Example 1: Writing Help
+### Example 1: Writing Help with Selection
 ```
 You: Select introduction paragraph
 
@@ -338,7 +406,48 @@ You: Click "Accept"
 → Paragraph updated!
 ```
 
-### Example 2: Code Improvement
+### Example 2: Multi-Document Research
+```
+You: Add to context:
+     - "Paper 1: Machine Learning.pdf"
+     - "Paper 2: Deep Learning.pdf"  
+     - "Paper 3: Neural Networks.pdf"
+
+You: "What are the common methodologies across these papers?"
+
+AI: [Reads all 3 papers from context]
+    "The three papers share these methodologies:
+     1. Supervised learning with labeled datasets
+     2. Backpropagation for optimization
+     3. Cross-validation for accuracy..."
+
+You: "Create a summary note"
+
+AI: [Creates new note with synthesis]
+    "Created note: Research Summary"
+```
+
+### Example 3: Code Improvement with Context
+```
+You: Add to context:
+     - "utils.ts" (helper functions)
+     - "types.ts" (type definitions)
+
+You: Select function "processData" in current note
+
+You: "Refactor using utilities from utils.ts and proper types"
+
+AI: Shows diff:
++ import { formatData } from './utils'
++ import { DataType } from './types'
+~ Changed implementation to use utilities
++ Added type annotations
+
+You: "Accept"
+→ Code updated with improvements
+```
+
+### Example 4: Code Improvement
 ```
 You: Select function "processData"
 
